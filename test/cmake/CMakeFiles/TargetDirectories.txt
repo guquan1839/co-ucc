@@ -1,0 +1,3 @@
+/home/guquan/ucc/test/cmake/CMakeFiles/rebuild_cache.dir
+/home/guquan/ucc/test/cmake/CMakeFiles/edit_cache.dir
+/home/guquan/ucc/test/cmake/CMakeFiles/test_ucc.dir
