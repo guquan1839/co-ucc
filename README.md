@@ -14,6 +14,10 @@ Platform Agnostic: Supports diverse hardware platforms, including CPUs, GPUs, an
 Collective Operations: Enhances throughput for various collective communication operations critical for high-performance computing (HPC).
 Compatibility: Built as an extension of the UCC library, ensuring seamless integration with existing UCC-based applications.
 
+### TODO: 
+1.realize the AlltoAll and Allreduce collective communication
+2.realize the UCX compress support  
+
 ### Installation
 
 To be added: Installation instructions for CO-UCC, including dependencies and build steps.
