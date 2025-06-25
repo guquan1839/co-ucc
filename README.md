@@ -25,9 +25,11 @@ To be added: Example code snippets and usage instructions for integrating CO-UCC
 ### References
 
 Venkata, M. G., Petrov, V., Lebedev, S., Bureddy, D., Aderholdt, F., Ladd, J., Bloch, G., Dubman, M., & Shainer, G. (2024). Unified Collective Communication (UCC): An Unified Library for CPU, GPU, and DPU Collectives. IEEE Symposium on High-Performance Interconnects (HOTI 2024). https://doi.org/10.1109/HOTI63208.2024.00018
+
 HPDPS Group. (2025). COCCL: Compression and Precision Co-Aware Collective Communication Library. https://github.com/hpdps-group/coccl
+
 Shamis, P., Venkata, M. G., Lopez, M. G., Baker, M. B., Hernandez, O., Itigin, Y., Dubman, M., Shainer, G., Graham, R. L., Liss, L., & others. (2015). UCX: An Open Source Framework for HPC Network APIs and Beyond. IEEE 23rd Annual Symposium on High-Performance Interconnects.
 
 
-License
+### License
 To be added: License information for the CO-UCC library.
