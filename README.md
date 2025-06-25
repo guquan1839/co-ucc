@@ -16,6 +16,7 @@ Compatibility: Built as an extension of the UCC library, ensuring seamless integ
 
 ### TODO: 
 1.realize the AlltoAll and Allreduce collective communication
+
 2.realize the UCX compress support  
 
 ### Installation
