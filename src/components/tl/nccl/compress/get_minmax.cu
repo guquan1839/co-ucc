@@ -1,10 +1,11 @@
+// This file is modified based on COCCL
 #include "nccl.h"
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
 #include <stdio.h>
 #include <cmath>
 #include <limits>
-#include <align.h>
+// #include <align.h>
 
 int cal_grid_num(int data_size, int block_size){
     return (data_size + block_size - 1) / block_size;

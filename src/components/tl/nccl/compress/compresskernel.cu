@@ -1,3 +1,4 @@
+// This file is modified based on COCCL
 #include "nccl.h"
 // #include "stdio.h"
 #include "compresskernel.h"
