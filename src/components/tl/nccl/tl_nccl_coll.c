@@ -14,6 +14,10 @@
 #include "utils/ucc_coll_utils.h"
 #include "utils/arch/cuda_def.h"
 #include "allgatherv/allgatherv.h"
+#include "components/tl/nccl/compress/compress_nccl.h"
+#include "components/tl/nccl/compress/cuda_checks.h"
+#include <stdio.h>
+
 
 #define ncclOpUnsupported (ncclNumOps + 1)
 #define ncclDataTypeUnsupported (ncclNumTypes + 1)
@@ -262,6 +266,48 @@ ucc_status_t ucc_tl_nccl_collective_sync(ucc_tl_nccl_task_t *task,
                                       &task->super);
 }
 
+// ucc_status_t ucc_tl_nccl_alltoall_start(ucc_coll_task_t *coll_task)
+// {
+//     ucc_tl_nccl_task_t *task   = ucc_derived_of(coll_task, ucc_tl_nccl_task_t);
+//     ucc_coll_args_t    *args   = &TASK_ARGS(task);
+//     ucc_tl_nccl_team_t *team   = TASK_TEAM(task);
+//     ucc_ee_h            ee     = coll_task->ee;
+//     cudaStream_t        stream = (ee) ? (cudaStream_t) ee->ee_context : team->stream;
+//     ucc_rank_t          gsize  = UCC_TL_TEAM_SIZE(team);
+//     ucc_status_t        status = UCC_OK;
+//     ptrdiff_t           sbuf   = (ptrdiff_t)args->src.info.buffer;
+//     ptrdiff_t           rbuf   = (ptrdiff_t)args->dst.info.buffer;
+//     size_t     data_size;
+//     ucc_rank_t peer;
+
+//     task->super.status = UCC_INPROGRESS;
+//     data_size          = (size_t)(args->src.info.count / gsize) *
+//                 ucc_dt_size(args->src.info.datatype);
+//     ucc_assert(args->src.info.count % gsize == 0);
+//     if (data_size == 0) {
+//         task->super.status = UCC_OK;
+//         return ucc_task_complete(&task->super);
+//     }
+//     UCC_TL_NCCL_PROFILE_REQUEST_EVENT(coll_task, "nccl_alltoall_start", 0);
+//     NCCLCHECK_GOTO(ncclGroupStart(), exit_coll, status, UCC_TL_TEAM_LIB(team),
+//                    &task->nccl_progress_st, team->nccl_comm, 0);
+//     for (peer = 0; peer < gsize; peer++) {
+//         NCCLCHECK_GOTO(ncclSend((void *)(sbuf + peer * data_size), data_size,
+//                                 ncclChar, peer, team->nccl_comm, stream),
+//                        exit_coll, status, UCC_TL_TEAM_LIB(team),
+//                        &task->nccl_progress_st, team->nccl_comm, 0);
+//         NCCLCHECK_GOTO(ncclRecv((void *)(rbuf + peer * data_size), data_size,
+//                                 ncclChar, peer, team->nccl_comm, stream),
+//                        exit_coll, status, UCC_TL_TEAM_LIB(team),
+//                        &task->nccl_progress_st, team->nccl_comm, 0);
+//     }
+//     NCCLCHECK_GOTO(ncclGroupEnd(), exit_coll, status, UCC_TL_TEAM_LIB(team),
+//                    &task->nccl_progress_st, team->nccl_comm, 1);
+//     status = ucc_tl_nccl_collective_sync(task, stream);
+// exit_coll:
+//     return status;
+// }
+
 ucc_status_t ucc_tl_nccl_alltoall_start(ucc_coll_task_t *coll_task)
 {
     ucc_tl_nccl_task_t *task   = ucc_derived_of(coll_task, ucc_tl_nccl_task_t);
@@ -276,29 +322,115 @@ ucc_status_t ucc_tl_nccl_alltoall_start(ucc_coll_task_t *coll_task)
     size_t     data_size;
     ucc_rank_t peer;
 
+
+    ncclDataType_t      dtype, compressed_dtype;
+    size_t              compressed_count;
+
+
     task->super.status = UCC_INPROGRESS;
     data_size          = (size_t)(args->src.info.count / gsize) *
                 ucc_dt_size(args->src.info.datatype);
+                
     ucc_assert(args->src.info.count % gsize == 0);
+
     if (data_size == 0) {
         task->super.status = UCC_OK;
         return ucc_task_complete(&task->super);
     }
+
+    dtype = ucc_to_nccl_dtype[UCC_DT_PREDEFINED_ID(args->src.info.datatype)];
+    compressed_dtype = ncclUint8;
+
+    // 根据数据类型估算压缩后块大小
+    if (dtype == ncclFloat32) {
+        compressed_count = ucc_compress_align(args->src.info.count / gsize, 32) +
+                           ucc_compress_align(4 * 2, 32);
+    } else if (dtype == ncclFloat16) {
+        compressed_count = ucc_compress_align(args->src.info.count / gsize, 32) +
+                           ucc_compress_align(2 * 2, 32);
+    } else {
+        return UCC_ERR_NOT_SUPPORTED;
+    }
+
+    // 申请压缩发送/接收缓冲区
+    void **send_compressed = (void **)ucc_malloc(sizeof(void *) * gsize, "send_compressed_bufs");
+    void **recv_compressed = (void **)ucc_malloc(sizeof(void *) * gsize, "recv_compressed_bufs");
+    // void** send_compressed = NULL;
+    // void** recv_compressed = NULL;
+
+    if (!send_compressed || !recv_compressed) {
+        status = UCC_ERR_NO_MEMORY;
+        goto exit_coll;
+    }
+
+    for (peer = 0; peer < gsize; peer++) {
+        CUDACHECK(cudaMallocAsync(&send_compressed[peer],compressed_count * ncclTypeSize(compressed_dtype),stream));
+        CUDACHECK(cudaMallocAsync(&recv_compressed[peer],compressed_count * ncclTypeSize(compressed_dtype),stream));
+    }
+
+    CUDACHECK(cudaStreamSynchronize(stream));
+
+    // 压缩每块数据
+    for (peer = 0; peer < gsize; peer++) {
+        const void *input_ptr = (void *)(sbuf + peer * data_size);
+        NCCLCHECK(ncclCompress(input_ptr,
+                                    args->src.info.count / gsize,
+                                    dtype,
+                                    &send_compressed[peer],
+                                    &compressed_count,
+                                    &compressed_dtype,
+                                    1,
+                                    stream));
+    }
+
+
+
+
     UCC_TL_NCCL_PROFILE_REQUEST_EVENT(coll_task, "nccl_alltoall_start", 0);
     NCCLCHECK_GOTO(ncclGroupStart(), exit_coll, status, UCC_TL_TEAM_LIB(team),
                    &task->nccl_progress_st, team->nccl_comm, 0);
+    // for (peer = 0; peer < gsize; peer++) {
+    //     NCCLCHECK_GOTO(ncclSend((void *)(sbuf + peer * data_size), data_size,
+    //                             ncclChar, peer, team->nccl_comm, stream),
+    //                    exit_coll, status, UCC_TL_TEAM_LIB(team),
+    //                    &task->nccl_progress_st, team->nccl_comm, 0);
+    //     NCCLCHECK_GOTO(ncclRecv((void *)(rbuf + peer * data_size), data_size,
+    //                             ncclChar, peer, team->nccl_comm, stream),
+    //                    exit_coll, status, UCC_TL_TEAM_LIB(team),
+    //                    &task->nccl_progress_st, team->nccl_comm, 0);
+    // }
     for (peer = 0; peer < gsize; peer++) {
-        NCCLCHECK_GOTO(ncclSend((void *)(sbuf + peer * data_size), data_size,
-                                ncclChar, peer, team->nccl_comm, stream),
-                       exit_coll, status, UCC_TL_TEAM_LIB(team),
-                       &task->nccl_progress_st, team->nccl_comm, 0);
-        NCCLCHECK_GOTO(ncclRecv((void *)(rbuf + peer * data_size), data_size,
-                                ncclChar, peer, team->nccl_comm, stream),
-                       exit_coll, status, UCC_TL_TEAM_LIB(team),
-                       &task->nccl_progress_st, team->nccl_comm, 0);
+        NCCLCHECK_GOTO(ncclSend(send_compressed[peer],
+                            compressed_count * ncclTypeSize(compressed_dtype),
+                            compressed_dtype, peer, team->nccl_comm, stream),
+                            exit_coll, status, UCC_TL_TEAM_LIB(team),
+                            &task->nccl_progress_st, team->nccl_comm, 0);
+        NCCLCHECK_GOTO(ncclRecv(recv_compressed[peer],
+                            compressed_count * ncclTypeSize(compressed_dtype),
+                            compressed_dtype, peer, team->nccl_comm, stream),
+                            exit_coll, status, UCC_TL_TEAM_LIB(team),
+                            &task->nccl_progress_st, team->nccl_comm, 0);
     }
+
+
     NCCLCHECK_GOTO(ncclGroupEnd(), exit_coll, status, UCC_TL_TEAM_LIB(team),
                    &task->nccl_progress_st, team->nccl_comm, 1);
+
+
+    // 解压
+    for (peer = 0; peer < gsize; peer++) {
+        void *output_ptr = (void *)(rbuf + peer * data_size);
+        NCCLCHECK(ncclDecompress(recv_compressed[peer],
+                                      compressed_count,
+                                      compressed_dtype,
+                                      output_ptr,
+                                      args->dst.info.count / gsize,
+                                      dtype,
+                                      1,
+                                      stream));
+    }
+
+
     status = ucc_tl_nccl_collective_sync(task, stream);
 exit_coll:
     return status;
