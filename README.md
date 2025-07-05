@@ -1,145 +1,41 @@
-# Unified Collective Communication (UCC)
+# CO - Unified Collective Communication (CO-UCC)
 
-<img src="docs/images/ucc_logo.png" width="75%" height="75%">
+### CO-UCC: Performance-Enhanced Unified Collective Communication Library
 
-UCC is a collective communication operations API and library that is flexible, complete, and feature-rich for current and emerging programming models and runtimes.
+### Overview
 
-- [Design Goals](#design-goals)
-- [API](https://openucx.github.io/ucc/)
-- [Building](#compiling-and-installing)
-- [Community](#community)
-- [Contributing](#contributing)
-- [License](#license)
-- [Publication](#publication)
+CO-UCC is a high-performance extension of NVIDIA's Unified Collective Communication (UCC) library, designed to enhance communication throughput for collective operations across heterogeneous systems. Inspired by the COCCL library, CO-UCC integrates precision and compression techniques to accelerate communication on diverse hardware platforms, including CPUs, GPUs, and DPUs.
+This project builds upon the UCC framework introduced in the paper by Venkata et al. (2024) and draws inspiration from the COCCL library (HPDPS Group, 2025). CO-UCC aims to address performance limitations in the original UCC implementation while maintaining its platform-agnostic flexibility.
 
-## Design Goals
-* Highly scalable and performant collectives for HPC, AI/ML and I/O workloads
-* Nonblocking collective operations that cover a variety of programming models
-* Flexible resource allocation model
-* Support for relaxed ordering model
-* Flexible synchronous model
-* Repetitive collective operations (init once and invoke multiple times)
-* Hardware collectives are a first-class citizen
+### Features
 
-### UCC Component Architecture
-![](docs/images/ucc_components.png)
+Performance Optimization: Incorporates advanced compression and precision techniques to improve communication efficiency.
+Platform Agnostic: Supports diverse hardware platforms, including CPUs, GPUs, and DPUs, leveraging UCC's flexible framework.
+Collective Operations: Enhances throughput for various collective communication operations critical for high-performance computing (HPC).
+Compatibility: Built as an extension of the UCC library, ensuring seamless integration with existing UCC-based applications.
 
-## Contributing
-Thanks for your interest in contributing to UCC, please see our technical and
-legal guidelines in the [contributing](CONTRIBUTING.md) file.
+### TODO: 
+1.realize the AlltoAll and Allreduce collective communication
 
-All contributors have to comply with ["Membership Voluntary
-Consensus Standard"](https://ucfconsortium.org/policy/)  and ["Export Compliant
-Contribution Submissions"](https://ucfconsortium.org/policy/) policies.
+2.realize the UCX compress support  
 
-## License
-UCC is BSD-style licensed, as found in the [LICENSE](LICENSE) file.
+### Installation
 
-## Required packages
+To be added: Installation instructions for CO-UCC, including dependencies and build steps.
 
-* [UCX](https://github.com/openucx/ucx)
-   * UCC uses utilities provided by UCX's UCS component
+### Usage
 
-* [CUDA](https://developer.nvidia.com/cuda-toolkit) (optional)
-   * UCC supports CUDA collectives. To compile with CUDA support, install
-     [NVIDIA CUDA](https://developer.nvidia.com/cuda-downloads) 11.0 or above.
+To be added: Example code snippets and usage instructions for integrating CO-UCC into your HPC applications.
 
-* [HIP](https://rocmdocs.amd.com/en/latest/Programming_Guides/HIP-GUIDE.html) (optional)
-   * UCC supports AMD GPUs using HIP. Instructions for installing ROCM/HIP can be found at
-     [AMD ROCM](https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation_new.html).
+### References
 
-* Doxygen
-   * UCC uses Doxygen for generating API documentation
+Venkata, M. G., Petrov, V., Lebedev, S., Bureddy, D., Aderholdt, F., Ladd, J., Bloch, G., Dubman, M., & Shainer, G. (2024). Unified Collective Communication (UCC): An Unified Library for CPU, GPU, and DPU Collectives. IEEE Symposium on High-Performance Interconnects (HOTI 2024). https://doi.org/10.1109/HOTI63208.2024.00018
 
-## Compiling and Installing
+HPDPS Group. (2025). COCCL: Compression and Precision Co-Aware Collective Communication Library. https://github.com/hpdps-group/coccl
 
-### Developer's Build
-```sh
-$ ./autogen.sh
-$ ./configure --prefix=<ucc-install-path> --with-ucx=<ucx-install-path>
-$ make
-```
-
-### Build Documentation
-```sh
-$ ./autogen.sh
-$ ./configure --prefix=<ucc-install-path> --with-docs-only
-$ make docs
-```
-
-### Open MPI and UCC collectives
-
-#### Compile UCX 
-```sh
-$ git clone https://github.com/openucx/ucx
-$ cd ucx
-$ ./autogen.sh; ./configure --prefix=<ucx-install-path>; make -j install
-```
-#### Compile UCC
-
-```sh
-$ git clone https://github.com/openucx/ucc
-$ cd ucc
-$ ./autogen.sh; ./configure --prefix=<ucc-install-path> --with-ucx=<ucx-install-path>; make -j install
-```
-
-#### Compile Open MPI 
-
-```sh
-$ git clone https://github.com/open-mpi/ompi
-$ cd ompi
-$ ./autogen.pl; ./configure --prefix=<ompi-install-path> --with-ucx=<ucx-install-path> --with-ucc=<ucc-install-path>; make -j install
-```
-
-#### Run MPI programs
-
-```sh
-$ mpirun -np 2 --mca coll_ucc_enable 1 --mca coll_ucc_priority 100 ./my_mpi_app
-```
-
-#### Run OpenSHMEM programs
-
-```sh
-$ mpirun -np 2 --mca scoll_ucc_enable 1 --mca scoll_ucc_priority 100 ./my_openshmem_app
-```
+Shamis, P., Venkata, M. G., Lopez, M. G., Baker, M. B., Hernandez, O., Itigin, Y., Dubman, M., Shainer, G., Graham, R. L., Liss, L., & others. (2015). UCX: An Open Source Framework for HPC Network APIs and Beyond. IEEE 23rd Annual Symposium on High-Performance Interconnects.
 
 
-### SUPPORTED Transports
-* UCX/UCP
-  - InfiniBand, ROCE, Cray Gemini and Aries, Shared Memory
-* SHARP
-* CUDA
-* NCCL
-* RCCL
-* MLX5
+### License
+To be added: License information for the CO-UCC library.
 
-
-### Publication
-
-To cite UCC in a publication, please use the following BibTex entry:
-
-```
-@inproceedings{DBLP:conf/hoti/VenkataPLBALBDS24,
-  author       = {Manjunath Gorentla Venkata and
-                  Valentine Petrov and
-                  Sergey Lebedev and
-                  Devendar Bureddy and
-                  Ferrol Aderholdt and
-                  Joshua Ladd and
-                  Gil Bloch and
-                  Mike Dubman and
-                  Gilad Shainer},
-  title        = {Unified Collective Communication {(UCC):} An Unified Library for CPU,
-                  GPU, and {DPU} Collectives},
-  booktitle    = {{IEEE} Symposium on High-Performance Interconnects, {HOTI} 2024, Albuquerque,
-                  NM, USA, August 21-23, 2024},
-  pages        = {37--46},
-  publisher    = {{IEEE}},
-  year         = {2024},
-  url          = {https://doi.org/10.1109/HOTI63208.2024.00018},
-  doi          = {10.1109/HOTI63208.2024.00018},
-  timestamp    = {Thu, 19 Sep 2024 11:00:54 +0200},
-  biburl       = {https://dblp.org/rec/conf/hoti/VenkataPLBALBDS24.bib},
-  bibsource    = {dblp computer science bibliography, https://dblp.org}
-}
-```
