@@ -56,8 +56,7 @@ libucc_tl_nccl_la_LDFLAGS  = \
 libucc_tl_nccl_la_LIBADD   = \
     $(CUDA_LIBS) $(NCCL_LIBADD) \
     $(UCC_TOP_BUILDDIR)/src/libucc.la \
-    compress/compresskernel.lo \
-    compress/get_minmax.lo
+
 
 ###############################
 # CUDA 自动编译规则（使用 cuda_lt.sh）
@@ -65,24 +64,24 @@ libucc_tl_nccl_la_LIBADD   = \
 NVCC = nvcc
 
 NVCCFLAGS = -O2 -std=c++11 \
-  -Xcompiler=-Wall \
-  -Xcompiler=-Werror \
-  -Xcompiler=-funwind-tables \
-  -Xcompiler=-Wno-missing-field-initializers \
-  -Xcompiler=-Wno-unused-parameter \
-  -Xcompiler=-Wno-long-long \
-  -Xcompiler=-Wno-endif-labels \
-  -Xcompiler=-Wno-sign-compare \
-  -Xcompiler=-Wno-multichar \
-  -Xcompiler=-Wno-deprecated-declarations \
-  -Xcompiler=-Winvalid-pch \
-  -Xcompiler=-Wshadow
+    -Xcompiler=-Wall \
+    -Xcompiler=-Werror \
+    -Xcompiler=-funwind-tables \
+    -Xcompiler=-Wno-missing-field-initializers \
+    -Xcompiler=-Wno-unused-parameter \
+    -Xcompiler=-Wno-long-long \
+    -Xcompiler=-Wno-endif-labels \
+    -Xcompiler=-Wno-sign-compare \
+    -Xcompiler=-Wno-multichar \
+    -Xcompiler=-Wno-deprecated-declarations \
+    -Xcompiler=-Winvalid-pch \
+    -Xcompiler=-Wshadow
 
 .cu.o:
-    $(NVCC) -c $< -o $@ $(NVCCFLAGS)
+	$(NVCC) -c $< -o $(top_srcdir)/src/components/tl/nccl/compress/$@ $(NVCCFLAGS)
 
 .cu.lo:
-	/bin/bash $(top_srcdir)/cuda_lt.sh "$(LIBTOOL)" $@ $(NVCC) -c $< $(NVCCFLAGS)
+	/bin/bash $(top_srcdir)/nccl_cuda_lt.sh "$(LIBTOOL)" $@ $(NVCC) -c $< $(NVCCFLAGS)
 
 
 # 包含通用模块配置（如 module.am）

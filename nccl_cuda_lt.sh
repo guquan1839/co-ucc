@@ -63,4 +63,13 @@ echo ""                                           >> ${lo_filepath}
 echo "# Name of the non-PIC object."              >> ${lo_filepath}
 echo "non_pic_object=\'${local_npic_filepath}\'"  >> ${lo_filepath}
 
+
+
+echo "测试 脚本目录是否正确"
+
+echo "[DEBUG] lo_filepath = ${lo_filepath}"
+echo "[DEBUG] lo_dir = ${lo_dir}"
+echo "[DEBUG] local_pic_filepath = ${local_pic_filepath}"
+echo "[DEBUG] new_local_pic_filepath = ${lo_dir}/${local_pic_dir}${o_filename}"
+
 echo "脚本运行完毕"
