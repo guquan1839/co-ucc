@@ -55,7 +55,7 @@ libucc_tl_nccl_la_LDFLAGS  = \
 
 libucc_tl_nccl_la_LIBADD   = \
     $(CUDA_LIBS) $(NCCL_LIBADD) \
-    $(UCC_TOP_BUILDDIR)/src/libucc.la \
+    $(UCC_TOP_BUILDDIR)/src/libucc.la
 
 
 ###############################
@@ -78,7 +78,7 @@ NVCCFLAGS = -O2 -std=c++11 \
     -Xcompiler=-Wshadow
 
 .cu.o:
-	$(NVCC) -c $< -o $(top_srcdir)/src/components/tl/nccl/compress/$@ $(NVCCFLAGS)
+	$(NVCC) -c $< -o $@ $(NVCCFLAGS)
 
 .cu.lo:
 	/bin/bash $(top_srcdir)/nccl_cuda_lt.sh "$(LIBTOOL)" $@ $(NVCC) -c $< $(NVCCFLAGS)
